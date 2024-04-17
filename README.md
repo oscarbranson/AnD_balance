@@ -1,3 +1,7 @@
+<div align="right">
+    <a href="https://badge.fury.io/py/AnD_balance"><img src="https://badge.fury.io/py/AnD_balance.svg" alt="PyPI version" height="18"></a>
+</div>
+
 # AnD_balance
 
 A Python package for communication with A&D FX-i/FX-iN balances.
