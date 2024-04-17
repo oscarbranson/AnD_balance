@@ -287,4 +287,7 @@ class FX_Balance:
         msg.append('*' * maxlen)
         
         return '\n'.join(msg)
-        
+
+
+# for now, treat FZ balances like FX balances
+FZ_balance = FX_Balance
