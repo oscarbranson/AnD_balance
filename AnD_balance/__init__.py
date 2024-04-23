@@ -1,3 +1,3 @@
-from balance import FX_Balance, FZ_Balance
+from .balance import FX_Balance
 
 VERSION = '0.0.1'
