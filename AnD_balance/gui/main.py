@@ -1,5 +1,5 @@
 # AnD_balance/gui/balance_gui.py
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QHBoxLayout
 from PyQt5.QtCore import Qt, pyqtSlot
 from PyQt5.QtGui import QColor, QKeyEvent, QPainter
 
@@ -20,8 +20,43 @@ class DummyBalance:
         return 1.2345, 'g', 'Stable'
     
 class DummyTemp:
+    # def __init__(self):
+    #     raise ValueError
     def read(self):
         return np.random.normal(22,1)
+
+class StatusLED(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        self.off()
+        self.status = False
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setBrush(self.color)
+        
+        x = int(self.width() * 0.1)
+        width = int(self.width() * 0.8)
+        y = int(self.height() * 0.1)
+        height = int(self.height() * 0.8)
+        
+        painter.drawEllipse(x, y, width, height)
+
+    def setColor(self, color):
+        self.color = color
+        self.update()  # Trigger a repaint
+    
+    def on(self):
+        self.setColor(QColor(0,255,0))  # set green
+        self.status = True
+        
+    def off(self):
+        self.setColor(QColor(255, 0, 0))  # set red
+        self.status = False
+
+    def isOn(self):
+        return self.status
 
 class BalanceGUI(QWidget):
     def __init__(self):
@@ -33,13 +68,6 @@ class BalanceGUI(QWidget):
         self._temp_file = pkg_resources.resource_filename('AnD_balance', 'gui/temp.json')
         with open(self._temp_file, 'r') as f:
             self._temp_data = json.load(f)
-
-        # self.balance = DummyBalance()
-        self.balance = FX_Balance()
-        self.balance_connected = True
-        
-        self.temp_probe = DummyTemp()
-        self.temp_probe_connected = True
 
         self.layout = QGridLayout()
         self.layout.setRowStretch(1, 1)
@@ -54,6 +82,22 @@ class BalanceGUI(QWidget):
 
         self.select_db_file()
 
+        # self.balance = DummyBalance()
+        try:
+            self.balance = FX_Balance()
+            self.balance_LED.on()
+        except:
+            pass
+        
+        try:
+            self.temp_probe = DummyTemp()
+            self.temp_LED.on()
+        except:
+            print('temp failed')
+            self.temperature_checkbox.setChecked(False)
+            self.temperature_checkbox.setEnabled(False)
+            self.toggle_auto_temp()
+            pass
     
     def make_fields(self):
         # first row: database selection
@@ -86,7 +130,7 @@ class BalanceGUI(QWidget):
         
         self.temperature_checkbox.setChecked(True)
         self.temperature_field.setEnabled(False)
-        self.temperature_checkbox.clicked.connect(self.toggle_auto_temp)       
+        self.temperature_checkbox.clicked.connect(self.toggle_auto_temp)   
         
         self.layout.addWidget(self.salinity_label, row, 0)
         self.layout.addWidget(self.salinity_field, row, 1)
@@ -98,13 +142,33 @@ class BalanceGUI(QWidget):
 
         # self.make_data_table(row)
 
-        # last row: measure button
+        # fourth row: measure button
         row = 3
         col = 0
         self.read_button = QPushButton('Read')
         self.read_button.clicked.connect(self.read)
         self.layout.addWidget(self.read_button, row, 0, 1, 5)
         col += 4
+        
+        # bottom bar: status LEDs
+        row = 4
+        
+        self.status_bar = QHBoxLayout()
+        self.status_bar.addStretch()
+        
+        self.temp_LED_label = QLabel('Temperature Probe:')
+        self.temp_LED = StatusLED()
+        self.temp_LED.setFixedSize(10,10)
+        self.status_bar.addWidget(self.temp_LED_label)
+        self.status_bar.addWidget(self.temp_LED)
+        
+        self.balance_LED_label = QLabel('Balance:')
+        self.balance_LED = StatusLED()
+        self.balance_LED.setFixedSize(10,10)
+        self.status_bar.addWidget(self.balance_LED_label)
+        self.status_bar.addWidget(self.balance_LED)
+        
+        self.layout.addLayout(self.status_bar, row, 0, 1, 5)
         
 
     @pyqtSlot()
