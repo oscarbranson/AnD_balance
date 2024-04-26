@@ -1,7 +1,7 @@
 # AnD_balance/gui/balance_gui.py
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QHBoxLayout
-from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
-from PyQt5.QtGui import QColor, QKeyEvent, QPainter
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QHBoxLayout, QShortcut
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QTimer
+from PyQt5.QtGui import QColor, QPainter, QIcon
 
 from sqlmodel import SQLModel, create_engine, Session
 from .db import BuoyantWeight
@@ -70,6 +70,7 @@ class BalanceGUI(QWidget):
         
         self.setWindowTitle('Buoyant Weights')
         self.resize(800, 600)
+        self.setWindowIcon(QIcon(pkg_resources.resource_filename('AnD_balance', 'gui/icon.png')))
         
         self._temp_file = pkg_resources.resource_filename('AnD_balance', 'gui/temp.json')
         with open(self._temp_file, 'r') as f:
@@ -88,13 +89,27 @@ class BalanceGUI(QWidget):
 
         self.select_db_file()
 
-        self.init_balance()
-        self.init_temp_probe()
+        self.balance = None
+        self.temp_probe = None
+        
+        self.balance_timer = QTimer()
+        self.balance_timer.timeout.connect(self.init_balance)
+        self.balance_timer.start(1000)  # Run init_balance every 1000 milliseconds
+        
+        self.temp_probe_timer = QTimer()
+        self.temp_probe_timer.timeout.connect(self.init_temp_probe)
+        self.temp_probe_timer.start(1000)
+        
+        # self.init_balance()
+        # self.init_temp_probe()
         
     def init_balance(self):
         try:
             self.balance = FX_Balance()
             self.balance_LED.on()
+            self.balance_timer.stop()
+            print('balance initialized')
+            return
         except:
             pass
         
@@ -102,6 +117,9 @@ class BalanceGUI(QWidget):
         try:
             self.temp_probe = DummyTemp()
             self.temp_LED.on()
+            self.temp_probe_timer.stop()
+            print('temp probe initialized')
+            return
         except:
             print('temp failed')
             self.temperature_checkbox.setChecked(False)
@@ -155,10 +173,18 @@ class BalanceGUI(QWidget):
         # fourth row: measure button
         row = 3
         col = 0
-        self.read_button = QPushButton('Read')
+        self.read_button = QPushButton('Read [Ctrl+Space]')
         self.read_button.clicked.connect(self.read)
-        self.layout.addWidget(self.read_button, row, 0, 1, 5)
-        col += 4
+        self.read_shortcut = QShortcut('Ctrl+Space', self)
+        self.read_shortcut.activated.connect(self.read)
+        self.layout.addWidget(self.read_button, row, col, 1, 3)
+        
+        col += 3
+        self.tare_button = QPushButton('Tare [Ctrl+z]')
+        self.tare_button.clicked.connect(self.tare_balance)
+        self.layout.addWidget(self.tare_button, row, col, 1, 2)
+        self.tare_shortcut = QShortcut('Ctrl+z', self)
+        self.tare_shortcut.activated.connect(self.tare_balance)
         
         # bottom bar: status LEDs
         row = 4
@@ -185,6 +211,9 @@ class BalanceGUI(QWidget):
 
     @pyqtSlot()
     def read(self):
+        if self.balance is None:
+            return
+        
         sample_name = self.get_sample_name()
         timestamp = datetime.now().isoformat()
         
@@ -194,15 +223,7 @@ class BalanceGUI(QWidget):
             self.balance_LED.off()
             return
         
-        if self.temperature_checkbox.isChecked():
-            try:
-                temperature = self.read_temp()
-            except:
-                self.temp_LED.off()
-                self.toggle_auto_temp()
-                return
-        else:
-            temperature = float(self.temperature_field.text())
+        temperature = self.read_temp()
         
         new_data = {
             'sample': sample_name,
@@ -228,8 +249,28 @@ class BalanceGUI(QWidget):
             
             self.insert_row()
 
+    @pyqtSlot()
+    def tare_balance(self):
+        if self.balance is None:
+            return
+        self.balance.tare()
+
+    @pyqtSlot()
     def read_temp(self):
-        temperature = self.temp_probe.read()
+        if self.temp_probe is None:
+            return
+        
+        if self.temperature_checkbox.isChecked():
+            try:
+                temperature = self.temp_probe.read()
+            except:
+                self.temp_LED.off()
+                self.toggle_auto_temp()
+                return
+        else:
+            temperature = float(self.temperature_field.text())
+        
+        print(temperature)
         self.temperature_field.setText(f'{temperature:.2f}')
         return temperature
     
