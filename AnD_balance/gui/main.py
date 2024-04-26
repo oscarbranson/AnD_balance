@@ -1,5 +1,5 @@
 # AnD_balance/gui/balance_gui.py
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QHBoxLayout, QShortcut
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLabel, QLineEdit, QFileDialog, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QHBoxLayout, QShortcut, QVBoxLayout
 from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor, QPainter, QIcon
 
@@ -76,17 +76,19 @@ class BalanceGUI(QWidget):
         with open(self._temp_file, 'r') as f:
             self._temp_data = json.load(f)
 
-        self.layout = QGridLayout()
-        self.layout.setRowStretch(1, 1)
+        self.layout = QVBoxLayout()
+        # self.layout = QGridLayout()
+        # self.layout.setRowStretch(1, 1)
         self.setLayout(self.layout)
         
         self.db_path = None
         self.data_table = None
+        self.data = None
         
         self.data_model = BuoyantWeight
-        
+       
         self.make_fields()
-
+        
         self.select_db_file()
 
         self.balance = None
@@ -100,8 +102,8 @@ class BalanceGUI(QWidget):
         self.temp_probe_timer.timeout.connect(self.init_temp_probe)
         self.temp_probe_timer.start(1000)
         
-        # self.init_balance()
-        # self.init_temp_probe()
+        self.init_balance()
+        self.init_temp_probe()
         
     def init_balance(self):
         try:
@@ -129,27 +131,31 @@ class BalanceGUI(QWidget):
     
     def make_fields(self):
         # first row: database selection
-        row = 0
         col = 0
+        row_layout = QHBoxLayout()
+        
         self.recent_db_files = self._temp_data['recent_db_files']
         self.db_dropdown = QComboBox()
         self.db_dropdown.addItems(self.recent_db_files)
         self.db_dropdown.currentIndexChanged.connect(self.select_db_file)
-        self.layout.addWidget(self.db_dropdown, row, col, 1, 3)
+        row_layout.addWidget(self.db_dropdown)
+        row_layout.setStretchFactor(self.db_dropdown, 1)
         col += 3
 
         self.new_db_button = QPushButton('Open')
         self.new_db_button.clicked.connect(self.choose_db_file)
-        self.layout.addWidget(self.new_db_button, row, col, 1, 1)
+        row_layout.addWidget(self.new_db_button)
         col += 1
         
         self.new_db_button = QPushButton('New')
         self.new_db_button.clicked.connect(self.new_db_file)
-        self.layout.addWidget(self.new_db_button, row, col, 1, 1)
+        row_layout.addWidget(self.new_db_button)
         col += 1
         
-        row = 1
+        self.layout.addLayout(row_layout)
+        
         # second row - salinity and temperature
+        row_layout = QHBoxLayout()
         self.salinity_label = QLabel('Salinity:')
         self.salinity_field = QLineEdit('35.0')
         self.temperature_label = QLabel('Temperature:')
@@ -160,35 +166,42 @@ class BalanceGUI(QWidget):
         self.temperature_field.setEnabled(False)
         self.temperature_checkbox.clicked.connect(self.toggle_auto_temp)   
         
-        self.layout.addWidget(self.salinity_label, row, 0)
-        self.layout.addWidget(self.salinity_field, row, 1)
-        self.layout.addWidget(self.temperature_label, row, 2)
-        self.layout.addWidget(self.temperature_field, row, 3)
-        self.layout.addWidget(self.temperature_checkbox, row, 4)
+        row_layout.addWidget(self.salinity_label)
+        row_layout.addWidget(self.salinity_field)
+        row_layout.addWidget(self.temperature_label)
+        row_layout.addWidget(self.temperature_field)
+        row_layout.addWidget(self.temperature_checkbox)
+        
+        self.layout.addLayout(row_layout)
         
         # third row: table of measurements
+        row_layout = QHBoxLayout()
+        self.data_table = QTableWidget()
+        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        # self.make_data_table(row)
+        row_layout.addWidget(self.data_table)
+        self.layout.addLayout(row_layout)
+        self.populate_data_table()
 
-        # fourth row: measure button
-        row = 3
-        col = 0
+
+        # # fourth row: measure button
+        row_layout = QHBoxLayout()
+        
         self.read_button = QPushButton('Read [Ctrl+Space]')
         self.read_button.clicked.connect(self.read)
         self.read_shortcut = QShortcut('Ctrl+Space', self)
         self.read_shortcut.activated.connect(self.read)
-        self.layout.addWidget(self.read_button, row, col, 1, 3)
+        row_layout.addWidget(self.read_button)
         
-        col += 3
         self.tare_button = QPushButton('Tare [Ctrl+z]')
         self.tare_button.clicked.connect(self.tare_balance)
-        self.layout.addWidget(self.tare_button, row, col, 1, 2)
+        row_layout.addWidget(self.tare_button)
         self.tare_shortcut = QShortcut('Ctrl+z', self)
         self.tare_shortcut.activated.connect(self.tare_balance)
         
-        # bottom bar: status LEDs
-        row = 4
+        self.layout.addLayout(row_layout)
         
+        # # bottom bar: status LEDs
         self.status_bar = QHBoxLayout()
         self.status_bar.addStretch()
         
@@ -206,7 +219,7 @@ class BalanceGUI(QWidget):
         self.status_bar.addWidget(self.balance_LED_label)
         self.status_bar.addWidget(self.balance_LED)
         
-        self.layout.addLayout(self.status_bar, row, 0, 1, 5)
+        self.layout.addLayout(self.status_bar)
         
 
     @pyqtSlot()
@@ -300,7 +313,7 @@ class BalanceGUI(QWidget):
         else:
             return None
     
-    def make_data_table(self, row=2):
+    def populate_data_table(self):
         if self.data is None:
             return
 
@@ -308,17 +321,10 @@ class BalanceGUI(QWidget):
         colNames = ['sample'] + [c for c in self.data.columns if c not in ['notes', 'sample']]
         ncol = len(colNames)
 
-        col = 0
-        
-        self.data_table = QTableWidget()
-        
         self.data_table.setRowCount(nrow)
         self.data_table.setColumnCount(ncol)
 
-        self.data_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # self.data_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-        self.layout.addWidget(self.data_table, row, col, 1, 5)
         
         self.data_table.setHorizontalHeaderLabels(colNames)
         
@@ -332,6 +338,7 @@ class BalanceGUI(QWidget):
         self.data_table.setVerticalHeaderLabels(self.data.index[::-1].astype(str))
         
         self.insert_row()
+        
     
     def insert_row(self):
         self.data_table.insertRow(0)
@@ -374,6 +381,7 @@ class BalanceGUI(QWidget):
     def connect_db(self):
         if self.db_path:            
             self.db_uri = f'sqlite:///{self.db_path}'
+            print(self.db_uri)
             self.db_engine = create_engine(self.db_uri)
             SQLModel.metadata.create_all(self.db_engine)
             self.data = pd.read_sql_table('BuoyantWeightData', self.db_engine, parse_dates=False)
@@ -385,7 +393,7 @@ class BalanceGUI(QWidget):
         else:
             self.data = None
         
-        self.make_data_table()
+        self.populate_data_table()
  
     def disconnectDB(self):
         self.db_engine.disconnect()
