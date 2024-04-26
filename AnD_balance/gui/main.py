@@ -1,6 +1,6 @@
 # AnD_balance/gui/balance_gui.py
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QLabel, QLineEdit, QFileDialog, QComboBox, QTableWidget, QTableWidgetItem, QHeaderView, QCheckBox, QHBoxLayout
-from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QColor, QKeyEvent, QPainter
 
 from sqlmodel import SQLModel, create_engine, Session
@@ -26,6 +26,8 @@ class DummyTemp:
         return np.random.normal(22,1)
 
 class StatusLED(QWidget):
+    clicked = pyqtSignal()  # Define a custom signal
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         
@@ -54,6 +56,10 @@ class StatusLED(QWidget):
     def off(self):
         self.setColor(QColor(255, 0, 0))  # set red
         self.status = False
+        
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()  # Emit the custom signal
 
     def isOn(self):
         return self.status
@@ -82,13 +88,17 @@ class BalanceGUI(QWidget):
 
         self.select_db_file()
 
-        # self.balance = DummyBalance()
+        self.init_balance()
+        self.init_temp_probe()
+        
+    def init_balance(self):
         try:
             self.balance = FX_Balance()
             self.balance_LED.on()
         except:
             pass
         
+    def init_temp_probe(self):
         try:
             self.temp_probe = DummyTemp()
             self.temp_LED.on()
@@ -158,12 +168,14 @@ class BalanceGUI(QWidget):
         
         self.temp_LED_label = QLabel('Temperature Probe:')
         self.temp_LED = StatusLED()
+        self.temp_LED.clicked.connect(self.init_temp_probe)
         self.temp_LED.setFixedSize(10,10)
         self.status_bar.addWidget(self.temp_LED_label)
         self.status_bar.addWidget(self.temp_LED)
         
         self.balance_LED_label = QLabel('Balance:')
         self.balance_LED = StatusLED()
+        self.balance_LED.clicked.connect(self.init_balance)
         self.balance_LED.setFixedSize(10,10)
         self.status_bar.addWidget(self.balance_LED_label)
         self.status_bar.addWidget(self.balance_LED)
@@ -175,10 +187,20 @@ class BalanceGUI(QWidget):
     def read(self):
         sample_name = self.get_sample_name()
         timestamp = datetime.now().isoformat()
-        mass, unit, status = self.balance.get_weight()
+        
+        try:
+            mass, unit, status = self.balance.get_weight()
+        except:
+            self.balance_LED.off()
+            return
         
         if self.temperature_checkbox.isChecked():
-            temperature = self.read_temp()
+            try:
+                temperature = self.read_temp()
+            except:
+                self.temp_LED.off()
+                self.toggle_auto_temp()
+                return
         else:
             temperature = float(self.temperature_field.text())
         
