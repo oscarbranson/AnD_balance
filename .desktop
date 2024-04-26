@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Buoyant Weights
+Comment=Run AnD Balance Buoyant Weight GUI
+Exec=python -m AnD_balance.gui.run
+Icon=/path/to/your/icon.png
+Terminal=false
