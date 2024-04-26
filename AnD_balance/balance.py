@@ -271,6 +271,12 @@ class FX_Balance:
         
         return self.get_tare()
     
+    def zero(self, value=None, units='g'):
+        """
+        Alias for `tare` method.
+        """
+        self.tare(value=value, units=units)
+    
     def __repr__(self):
         msg = []
         
