@@ -14,6 +14,7 @@ import numpy as np
 from datetime import datetime
 
 from AnD_balance.balance import FX_Balance
+from AnD_balance.temperature import PicoTemp
 
 class DummyBalance:
     def get_weight(self):
@@ -117,7 +118,8 @@ class BalanceGUI(QWidget):
         
     def init_temp_probe(self):
         try:
-            self.temp_probe = DummyTemp()
+            # self.temp_probe = DummyTemp()
+            self.temp_probe = PicoTemp()
             self.temp_LED.on()
             self.temp_probe_timer.stop()
             print('temp probe initialized')
