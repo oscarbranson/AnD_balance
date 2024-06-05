@@ -1,3 +1,6 @@
+from glob import glob
+import serial
+
 class PicoTemp:
     TERMINATOR = '\r'.encode('UTF8')
 
@@ -11,6 +14,8 @@ class PicoTemp:
                 port = ports[0]
             else:
                 raise ValueError(f'Multiple serial ports found - please specify one of {ports}')
+        
+        self.port = port
         
         self.pico = serial.Serial(port, 115200, timeout=timeout)
 

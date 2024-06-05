@@ -34,6 +34,8 @@ class StatusLED(QWidget):
         
         self.off()
         self.status = False
+        
+        self.setToolTip('Click to reconnect')
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -110,6 +112,7 @@ class BalanceGUI(QWidget):
         try:
             self.balance = FX_Balance()
             self.balance_LED.on()
+            self.balance_LED.setToolTip('Connected - click to reconnect.')
             self.balance_timer.stop()
             print('balance initialized')
             return
@@ -121,8 +124,9 @@ class BalanceGUI(QWidget):
             # self.temp_probe = DummyTemp()
             self.temp_probe = PicoTemp()
             self.temp_LED.on()
+            self.temp_LED.setToolTip(f'Connected on {self.temp_probe.port} - click to reconnect.')
             self.temp_probe_timer.stop()
-            print('temp probe initialized')
+            print(f'temp probe initialized on {self.temp_probe.port}')
             return
         except:
             print('temp failed')
