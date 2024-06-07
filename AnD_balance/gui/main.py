@@ -7,7 +7,7 @@ from sqlmodel import SQLModel, create_engine, Session
 from .db import BuoyantWeight
 
 import os
-import pkg_resources
+from importlib import resources
 import json
 import pandas as pd
 import numpy as np
@@ -73,9 +73,9 @@ class BalanceGUI(QWidget):
         
         self.setWindowTitle('Buoyant Weights')
         self.resize(800, 600)
-        self.setWindowIcon(QIcon(pkg_resources.resource_filename('AnD_balance', 'gui/icon.png')))
+        self.setWindowIcon(QIcon(str(resources.files('AnD_balance') / 'AnD_balance/gui/icon.png')))
         
-        self._temp_file = pkg_resources.resource_filename('AnD_balance', 'gui/temp.json')
+        self._temp_file = str(resources.files('AnD_balance') / 'AnD_balance/gui/temp.json')
         with open(self._temp_file, 'r') as f:
             self._temp_data = json.load(f)
 
