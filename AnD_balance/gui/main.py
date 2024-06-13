@@ -320,6 +320,8 @@ class BalanceGUI(QWidget):
             return None
     
     def populate_data_table(self):
+        # TODO: fail elegantly if the database is corrupt
+        
         if self.data is None:
             return
 
