@@ -270,6 +270,7 @@ class BalanceGUI(QWidget):
 
     @pyqtSlot()
     def tare_balance(self):
+        # TODO: this is not working?
         if self.balance is None:
             return
         self.balance.tare()
