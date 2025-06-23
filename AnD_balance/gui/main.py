@@ -75,7 +75,7 @@ class BalanceGUI(QWidget):
         self.resize(800, 600)
         self.setWindowIcon(QIcon(str(resources.files('AnD_balance') / 'AnD_balance/gui/icon.png')))
         
-        self._temp_file = str(resources.files('AnD_balance') / 'AnD_balance/gui/temp.json')
+        self._temp_file = str(resources.files('AnD_balance') / 'gui/temp.json')
         with open(self._temp_file, 'r') as f:
             self._temp_data = json.load(f)
 
